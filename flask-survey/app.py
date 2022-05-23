@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, flash, jsonify, url_for
+from flask import Flask, request, render_template, redirect, flash, jsonify, url_for, session
 from surveys import Question, Survey
 
 from flask_debugtoolbar import DebugToolbarExtension
@@ -38,7 +38,7 @@ surveys = {
     "personality": personality_quiz,
 }
 
-responses = []
+# responses = []
 
 @app.route('/')
 def show_survey():
@@ -49,7 +49,9 @@ def show_survey():
 
 @app.route('/questions/<question_num>')
 def show_question(question_num):
+    responses = session['responses']
     question_integer = int(question_num)
+    print(session['responses'])
     if question_integer >= len(satisfaction_survey.questions):
         flash("Invalid question number")
         return redirect(url_for('show_question',question_num=len(responses)))
@@ -63,6 +65,9 @@ def show_question(question_num):
     if question_integer > len(responses):
         flash("Questions must be completed in order")
         return redirect(url_for('show_question',question_num=len(responses)))
+    if question_integer < len(responses):
+        flash("Question has been completed already")
+        return redirect(url_for('show_question',question_num=len(responses)))
     
     return render_template("question.html",the_question=the_question,the_choices=the_choices,allows_text_response=allows_text_response, question_num=question_num)
 
@@ -73,7 +78,10 @@ def record_answer():
     num_int = int(num)
     next_num = int(num)+1
     num_str = str(next_num)
+    # responses.append(ans)
+    responses = session['responses']
     responses.append(ans)
+    session['responses'] = responses
     if num_int == len(satisfaction_survey.questions)-1:
         return redirect("/thanks")
     if int(num) < len(satisfaction_survey.questions):
@@ -85,5 +93,9 @@ def thank_you():
     return render_template('/thanks.html')
     
 
+@app.route('/initialize',methods=['POST','GET'])
+def initialize_session():
+    session['responses'] = []
+    return redirect('/questions/0')
 
 
